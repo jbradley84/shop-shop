@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@apollo/client';
-
+import { idbPromise } from '../utils/helpers';
 import Cart from '../components/Cart';
 import { useStoreContext } from '../utils/GlobalState';
 import {
@@ -24,12 +24,28 @@ function Detail() {
   const { products, cart } = state;
 
   useEffect(() => {
+   // already in global store
     if (products.length) {
       setCurrentProduct(products.find((product) => product._id === id));
-    } else if (data) {
+    } 
+    // retrieved from server
+    else if (data) {
       dispatch({
         type: UPDATE_PRODUCTS,
         products: data.products,
+      });
+
+      data.products.forEach((product) => {
+         idbPromise('products', 'put', product);
+      });
+    }
+    // get cache from idb
+    else if (!loading) {
+      idbPromise('products', 'get').then((indexedProducts) => {
+         dispatch({
+            type: UPDATE_PRODUCTS,
+            products: indexedProducts
+         });
       });
     }
   }, [products, data, dispatch, id]);
